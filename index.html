@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hospital Patient Management</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #f4f6f9;
+}
+
+/* NAVBAR */
+nav {
+    background: #1d2671;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+}
+
+nav a {
+    color: white;
+    margin-left: 20px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+/* CONTAINER */
+.container {
+    padding: 30px;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 900px;
+    margin: auto;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* INPUTS */
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+}
+
+button {
+    background: #1d2671;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #141c52;
+}
+
+.hidden {
+    display: none;
+}
+
+.success {
+    background: #d4edda;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.error {
+    background: #f8d7da;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+pre {
+    background: #eee;
+    padding: 10px;
+    overflow-x: auto;
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<nav>
+    <div><b>ABC Hospital</b></div>
+    <div>
+        <a href="#" onclick="showPage('home')">Home</a>
+        <a href="#" onclick="showPage('about')">About</a>
+        <a href="#" onclick="showPage('create')">Add Patient</a>
+        <a href="#" onclick="showPage('view')">View Patients</a>
+        <a href="#" onclick="showPage('search')">Search Patient</a>
+    </div>
+</nav>
+
+<div class="container">
+
+<!-- HOME -->
+<div id="home" class="card">
+    <h2>Welcome to ABC Hospital</h2>
+    <p>
+        This Patient Management System is built using
+        <b>FastAPI</b> for backend and a modern frontend interface.
+    </p>
+</div>
+
+<!-- ABOUT -->
+<div id="about" class="card hidden">
+    <h2>About Hospital</h2>
+    <p>
+        ABC Hospital provides high-quality healthcare services
+        with secure digital patient record management.
+    </p>
+</div>
+
+<!-- CREATE PATIENT -->
+<div id="create" class="card hidden">
+    <h2>Add New Patient</h2>
+
+    <input id="id" placeholder="Patient ID">
+    <input id="name" placeholder="Name">
+    <input id="age" placeholder="Age">
+    <input id="city" placeholder="City">
+    <input id="district" placeholder="District">
+    <input id="state" placeholder="State">
+    <input id="pincode" placeholder="Pincode">
+    <input id="contact" placeholder="Contact">
+    <input id="email" placeholder="Email">
+
+    <button onclick="createPatient()">Create Patient</button>
+    <div id="createStatus"></div>
+</div>
+
+<!-- VIEW ALL -->
+<div id="view" class="card hidden">
+    <h2>All Patients</h2>
+    <button onclick="viewPatients()">Load Patients</button>
+    <pre id="viewResult"></pre>
+</div>
+
+<!-- SEARCH -->
+<div id="search" class="card hidden">
+    <h2>Search Patient by ID</h2>
+    <input id="searchId" placeholder="Enter Patient ID">
+    <button onclick="searchPatient()">Search</button>
+    <pre id="searchResult"></pre>
+</div>
+
+</div>
+<script>
+const BASE_URL = "http://127.0.0.1:8000";
+
+/* PAGE SWITCH */
+function showPage(page) {
+    document.querySelectorAll(".card").forEach(div =>
+        div.classList.add("hidden")
+    );
+    document.getElementById(page).classList.remove("hidden");
+}
+
+/* CREATE PATIENT */
+function createPatient() {
+
+    // ✅ GET ELEMENTS
+    const idEl = document.getElementById("id");
+    const nameEl = document.getElementById("name");
+    const ageEl = document.getElementById("age");
+    const cityEl = document.getElementById("city");
+    const districtEl = document.getElementById("district");
+    const stateEl = document.getElementById("state");
+    const pincodeEl = document.getElementById("pincode");
+    const contactEl = document.getElementById("contact");
+    const emailEl = document.getElementById("email");
+    const statusEl = document.getElementById("createStatus");
+
+    // ✅ VALIDATION
+    if (
+        !idEl.value || !nameEl.value || !ageEl.value ||
+        !cityEl.value || !districtEl.value || !stateEl.value ||
+        !pincodeEl.value || !contactEl.value || !emailEl.value
+    ) {
+        statusEl.innerHTML =
+            `<div class="error">❌ All fields are required</div>`;
+        return;
+    }
+
+    const patient = {
+        id: idEl.value.trim(),
+        name: nameEl.value.trim(),
+        age: Number(ageEl.value),
+        address: {
+            city: cityEl.value.trim(),
+            district: districtEl.value.trim(),
+            state: stateEl.value.trim(),
+            pincode: Number(pincodeEl.value)
+        },
+        contact: Number(contactEl.value),
+        email: emailEl.value.trim()
+    };
+
+    fetch(`${BASE_URL}/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patient)
+    })
+    .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw data;
+
+        statusEl.innerHTML =
+            `<div class="success">✔ Patient Created Successfully</div>`;
+    })
+    .catch(err => {
+        statusEl.innerHTML =
+            `<div class="error">❌ ${err.detail || "Invalid data"}</div>`;
+    });
+}
+
+/* VIEW ALL */
+function viewPatients() {
+    fetch(`${BASE_URL}/view`)
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("viewResult")
+            .textContent = JSON.stringify(data, null, 2);
+    });
+}
+
+/* SEARCH BY ID */
+function searchPatient() {
+    const searchIdEl = document.getElementById("searchId");
+    const resultEl = document.getElementById("searchResult");
+
+    const pid = searchIdEl.value.trim();
+    if (!pid) {
+        resultEl.textContent = "Please enter patient ID";
+        return;
+    }
+
+    fetch(`${BASE_URL}/patient/${pid}`)
+    .then(res => res.json())
+    .then(data => {
+        resultEl.textContent = JSON.stringify(data, null, 2);
+    });
+}
+</script>
+
+
+</body>
+</html>
