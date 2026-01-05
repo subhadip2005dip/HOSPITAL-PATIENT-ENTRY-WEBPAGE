@@ -1,33 +1,97 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+import json
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],   # allow frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-app=FastAPI()
+
+class Address(BaseModel):
+    city: str
+    district: str
+    state: str
+    pincode: int
+
+
+class PatientDetails(BaseModel):
+    id: str
+    name: str
+    age: int
+    address: Address
+    contact: int
+    email: str
+
+
+class Patient(BaseModel):
+    id: str
+    name: str
+    age: int
+    address: Address
+    contact: int
+    email: str
+
+
+
+def load_data():
+    try:
+        with open("database.json", "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+
+def save_data(data):
+    with open("database.json", "w") as f:
+        json.dump(data, f, indent=4)
+
+
 
 @app.get("/")
-def read_root():
-  return{"hellow":"world"}
-
-@app.get("/items/{item_id}")
-def read_item(item_id: str):
- return {"item_id":item_id}
+def hello():
+    return {"message": "patient management system"}
 
 
-class items(BaseModel):
-  name: str
-  price: int
-  password:str= 'dont show'
+@app.get("/about")
+def about():
+    return {"message": "welcome to abc hospital"}
 
 
-class ItemResponse(BaseModel):
-     name:str
-     price:int
+@app.get("/view")
+def view_patient():
+    return load_data()
 
 
-@app.post("/items/", response_model=ItemResponse)
+@app.get("/patient/{patient_id}")
+def find_patient_id(patient_id: str):
+    data = load_data()
 
-def create_items(items:items):
-  print(items)
-  return items
-          
-   
+    if patient_id in data:
+        return data[patient_id]
+
+    raise HTTPException(status_code=404, detail="Patient ID not found")
+
+
+@app.post("/create")
+def patient_entry(patient: Patient):
+    data = load_data()
+
+    if patient.id in data:
+        raise HTTPException(status_code=409, detail="Patient already exists")
+
+    data[patient.id] = patient.model_dump(exclude={"id"})
+    save_data(data)
+
+    return JSONResponse(
+        status_code=201,
+        content={"message": "Patient successfully created"}
+    )
